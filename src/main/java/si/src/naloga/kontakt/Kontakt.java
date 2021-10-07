@@ -17,6 +17,7 @@ public class Kontakt implements Serializable {
     private String opomba;
 
     public Kontakt(int id, String ime, String priimek, String naslov, String elektronskaPosta, String telefon, String mobilniTelefon, String opomba) {
+        //System.out.println("V konstruktor Kontakt notri");
         this.id = id;
         this.ime = ime;
         this.priimek = priimek;
@@ -28,6 +29,7 @@ public class Kontakt implements Serializable {
     }
 
     public Kontakt() {
+        System.out.println("V praznem Kontakt notri");
     }
 
     public int getId() {
