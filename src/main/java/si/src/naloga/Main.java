@@ -55,6 +55,12 @@ public class Main {
                 case "10":
                     telefonskiImenik.isciPoImenuAliPriimku(in);
                     break;
+                case "11":
+                    telefonskiImenik.shraniKontakteVBazo();
+                    break;
+                case "12":
+                    telefonskiImenik.pridobiKontakteIzBaze();
+                    break;
                 case "0":
                     System.exit(0);
                     break;
@@ -84,9 +90,11 @@ public class Main {
         System.out.println("5 - izpiši kontakt po ID-ju");
         System.out.println("6 - izpiši število vseh kontaktov");
         System.out.println("7 - Shrani kontakte na disk (serializacija)");
-        System.out.println("8 - Preberi kontake iz serializirano datoteke");
+        System.out.println("8 - Preberi kontake iz serializirane datoteke");
         System.out.println("9 - Izvozi kontakte v csv");
         System.out.println("10 - Iskanje kontaktov glede na ime ali priimek");
+        System.out.println("11 - Shranjevanje kontaktov v bazo");
+        System.out.println("12 - Uvoz kontaktov iz baze");
         System.out.println("");
         System.out.println("0 - Izhod iz aplikacije");
         System.out.println("----------------------------------");

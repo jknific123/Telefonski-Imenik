@@ -5,10 +5,7 @@ import si.src.naloga.kontakt.Kontakt;
 import si.src.naloga.kontakt.KontaktDBImpl;
 
 import java.io.*;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Scanner;
+import java.util.*;
 
 
 public class TelefonskiImenik {
@@ -19,19 +16,21 @@ public class TelefonskiImenik {
     public TelefonskiImenik() throws IOException, ClassNotFoundException {
         seznamKontaktov = new ArrayList<>();
         kontaktDB = KontaktDBImpl.getInstance();
-
-        if (kontaktDB.preveriPovezavo()) { // povezava z bazo je uspešno vzpostavljena
-            seznamKontaktov = kontaktDB.pridobiVse();
-            System.out.println("Povezava z bazo je uspešno vzpostavljena!");
-        }
-        else {
-            naloziSerializiranSeznamKontakotv();
-            //System.out.println("Podatki so bili prebrani iz serializirane datoteke!");
-        }
+        posodobiSeznamKontaktov();
     }
 
-    public void posodobiSeznamKontaktov() {
-        seznamKontaktov = kontaktDB.pridobiVse(); //  posodobimo seznam kontaktov
+    /**
+     * Posodobi kontakte v bazi če je povezava vzpostaljena, drugače pa v datoteki
+     */
+    public void posodobiSeznamKontaktov() throws IOException, ClassNotFoundException {
+
+        if (kontaktDB.preveriPovezavo()) { // povezava z bazo je vspostavljena
+            seznamKontaktov = kontaktDB.pridobiVse(); //  pridobimo kontakte iz baze in posodobimo seznam kontaktov
+        }
+        else if (!kontaktDB.preveriPovezavo()) { // povezava z bazo ni vspostavljena, zato preberemo kontakte iz diska
+            naloziSerializiranSeznamKontakotv();
+        }
+        seznamKontaktov.sort(Comparator.comparing(Kontakt::getId));
     }
 
     /**
@@ -46,11 +45,11 @@ public class TelefonskiImenik {
     }
 
     /**
-     * Metaoda doda nov kontakt v imenik
+     * Metoda doda nov kontakt v imenik
      *
      * onemogočimo dodajanje dupliciranega kontakta
      */
-    public void dodajKontakt(Scanner in) {
+    public void dodajKontakt(Scanner in) throws IOException, ClassNotFoundException {
 
         System.out.println("Vnesite podatke novega kontakta ločene z vejico!");
         System.out.println("Zahtevani podatki: Id,Ime,Priimek,Naslov,elektronskaPošta,telefon,mobilniTelefon,opomba");
@@ -60,9 +59,22 @@ public class TelefonskiImenik {
         String[] podatkiNovegaKontakta = vnos.split(",");
         boolean vnosOK = preveriVnos(podatkiNovegaKontakta);
         if (vnosOK) {
+            boolean check = false;
             Kontakt novKontakt = new Kontakt(Integer.parseInt(podatkiNovegaKontakta[0]),podatkiNovegaKontakta[1],podatkiNovegaKontakta[2],podatkiNovegaKontakta[3],podatkiNovegaKontakta[4],podatkiNovegaKontakta[5],podatkiNovegaKontakta[6],podatkiNovegaKontakta[7]);
-            kontaktDB.vstavi(novKontakt);
-            seznamKontaktov = kontaktDB.pridobiVse(); //  posodobimo seznam kontaktov
+            if (kontaktDB.preveriPovezavo()) { // dodamo kontakt v bazo
+                kontaktDB.vstavi(novKontakt);
+                check = true;
+            }
+            else if (!kontaktDB.preveriPovezavo()) {
+                seznamKontaktov.add(novKontakt);
+                serializirajSeznamKontaktov();
+                check = true;
+            }
+
+            if (check) {
+                System.out.println("Dodajanje novega kontakta je bilo uspešno!");
+                posodobiSeznamKontaktov();
+            }
         }
     }
 
@@ -71,52 +83,86 @@ public class TelefonskiImenik {
      * Metoda popravi podatke na obstoječem kontaktu
      * ID kontakta ni mogoče spreminjati
      */
-    public void urediKontakt(Scanner in) {
+    public void urediKontakt(Scanner in) throws IOException, ClassNotFoundException {
 
         System.out.println("Vnesite ID kontakta, ki ga hočete urejati: ");
         String vnos = in.next();
-        try {
+
+        boolean idOk = preveriVnosId(vnos);
+        if (idOk) {
             int vnesenID = Integer.parseInt(vnos);
-            try {
-                kontaktDB.pridobiPoId(vnesenID);
+            if (kontaktDB.preveriPovezavo()) {
+                try {
+                    Kontakt posodobljenKontakt = kontaktDB.pridobiPoId(vnesenID);
+                    if (posodobljenKontakt != null) {
+                        System.out.println("Vnesite nove podatke kontakta ločene z vejico!");
+                        System.out.println("Zahtevani podatki: Ime,Priimek,Naslov,elektronskaPošta,telefon,mobilniTelefon,opomba");
+                        System.out.println("Primer pravilnega vnosa: Janez,Pokljukar,Naslov 1,elektronska.posta@gmail.com,030111222,040333444,Opomba kontakta.");
+                        vnos = in.next();
+                        String[] podatkiPosodobljenegaKontakta = vnos.split(",");
+                        posodobiPoljaKontakta(posodobljenKontakt, podatkiPosodobljenegaKontakta);
+                        kontaktDB.posodobi(posodobljenKontakt);
+                    } else {
+                        System.out.println("Kontakt z dotičnim ID-jem ne obstaja!");
+                    }
+                }
+                catch (NullPointerException e) {
+                    System.out.println("Kontakt z dotičnim ID-jem ne obstaja!");
+                }
             }
-            catch (NullPointerException e) {
-                System.out.println("Kontakt z dotičnim ID-jem ne obstaja!");
+            else if (!kontaktDB.preveriPovezavo()) {
+                Kontakt posodobljenKontakt = najdiKontaktZaId(vnesenID);
+                if (posodobljenKontakt != null) {
+                    System.out.println("Vnesite nove podatke kontakta ločene z vejico!");
+                    System.out.println("Zahtevani podatki: Ime,Priimek,Naslov,elektronskaPošta,telefon,mobilniTelefon,opomba");
+                    System.out.println("Primer pravilnega vnosa: Janez,Pokljukar,Naslov 1,elektronska.posta@gmail.com,030111222,040333444,Opomba kontakta.");
+                    vnos = in.next();
+                    String[] podatkiPosodobljenegaKontakta = vnos.split(",");
+                    posodobiPoljaKontakta(posodobljenKontakt, podatkiPosodobljenegaKontakta);
+                    serializirajSeznamKontaktov();
+                }else {
+                    System.out.println("Kontakt z dotičnim ID-jem ne obstaja!");
+                }
             }
-            System.out.println("Vnesite nove podatke kontakta ločene z vejico!");
-            System.out.println("Zahtevani podatki: Ime,Priimek,Naslov,elektronskaPošta,telefon,mobilniTelefon,opomba");
-            System.out.println("Primer pravilnega vnosa: Janez,Pokljukar,Naslov 1,elektronska.posta@gmail.com,030111222,040333444,Opomba kontakta.");
-            vnos = in.next();
-            String[] podatkiPosodobljenegaKontakta = vnos.split(",");
-            Kontakt posodobljenKontakt = kontaktDB.pridobiPoId(vnesenID);
-            posodobiPoljaKontakta(posodobljenKontakt, podatkiPosodobljenegaKontakta);
-            kontaktDB.posodobi(posodobljenKontakt);
             posodobiSeznamKontaktov();
-        }
-        catch (NumberFormatException e){
-            System.out.println(vnos + " ni število!");
         }
     }
 
     /**
      * Brisanje kontakta po ID-ju
      */
-    public void izbrisiKontaktPoId(Scanner in) {
+    public void izbrisiKontaktPoId(Scanner in) throws IOException, ClassNotFoundException {
 
         System.out.println("Vnesite ID kontakta, ki ga hočete izbrisati: ");
         String vnos = in.next();
-        try {
-            int vnesenID = Integer.parseInt(vnos);
-            try {
-                kontaktDB.izbrisiPoId(vnesenID);
+
+        boolean idOk = preveriVnosId(vnos);
+        if (idOk) {
+            int id = Integer.parseInt(vnos);
+            boolean check = false;
+            if (kontaktDB.preveriPovezavo()) {
+                try {
+                    kontaktDB.izbrisiPoId(id);
+                    check = true;
+                }
+                catch (NullPointerException e) {
+                    System.out.println("Kontakt z dotičnim ID-jem ne obstaja!");
+                }
+            }
+            else if (!kontaktDB.preveriPovezavo()) {
+                boolean tmp = seznamKontaktov.removeIf(kontakt -> kontakt.getId() == id);
+                if (tmp) {
+                    check = true;
+                    serializirajSeznamKontaktov(); // posodobimo zapis v datoteki
+                }
+                else {
+                    System.out.println("Kontakt z dotičnim ID-jem ne obstaja!");
+                }
+            }
+            if (check) {
                 posodobiSeznamKontaktov();
+                System.out.println("Kontakt z dotičnim ID-jem je bil uspešno izbrisan!");
             }
-            catch (NullPointerException e) {
-                System.out.println("Kontakt z dotičnim ID-jem ne obstaja!");
-            }
-        }
-        catch (NumberFormatException e){
-            System.out.println(vnos + " ni število!");
         }
     }
 
@@ -126,18 +172,23 @@ public class TelefonskiImenik {
     public void izpisiKontaktZaId(Scanner in) {
         System.out.println("Vnesite ID kontakta, ki ga hočete izpisati: ");
         String vnos = in.next();
-        try {
+
+        boolean idOk = preveriVnosId(vnos);
+        if (idOk) {
             int vnesenID = Integer.parseInt(vnos);
-            try {
-                Kontakt iskaniKontakt = kontaktDB.pridobiPoId(vnesenID);
+            if (kontaktDB.preveriPovezavo()) {
+                try {
+                    Kontakt iskaniKontakt = kontaktDB.pridobiPoId(vnesenID);
+                    System.out.println(iskaniKontakt.toString());
+                }
+                catch (NullPointerException e) {
+                    System.out.println("Kontakt z dotičnim ID-jem ne obstaja!");
+                }
+            }
+            else if (!kontaktDB.preveriPovezavo()) {
+                Kontakt iskaniKontakt = najdiKontaktZaId(vnesenID);
                 System.out.println(iskaniKontakt.toString());
             }
-            catch (NullPointerException e) {
-                System.out.println("Kontakt z dotičnim ID-jem ne obstaja!");
-            }
-        }
-        catch (NumberFormatException e){
-            System.out.println(vnos + " ni število!");
         }
     }
 
@@ -146,11 +197,9 @@ public class TelefonskiImenik {
      */
     public void izpisiSteviloKontaktov() {
 
-        try {
-            posodobiSeznamKontaktov();
+        if (seznamKontaktov.size() != 0) {
             System.out.println("Število kontaktov: " + seznamKontaktov.size());
-        }
-        catch (NullPointerException e) {
+        } else {
             System.out.println("V imeniku ni kontaktov!");
         }
     }
@@ -161,7 +210,6 @@ public class TelefonskiImenik {
      */
     public void serializirajSeznamKontaktov() throws IOException {
 
-        posodobiSeznamKontaktov();
         // zapisovanje v datoteko
         FileOutputStream fileOutputStream = new FileOutputStream("kontakti.ser");
         ObjectOutputStream objectOutputStream = new ObjectOutputStream(fileOutputStream);
@@ -183,7 +231,7 @@ public class TelefonskiImenik {
             ObjectInputStream objectInputStream = new ObjectInputStream(fileInputStream);
             seznamKontaktov = (List<Kontakt>) objectInputStream.readObject();
             objectInputStream.close();
-            System.out.println("Podatki so bili naloženi iz diska.");
+            System.out.println("Podatki so bili naloženi iz serializirane datoteke.");
         }
         catch (FileNotFoundException e) {
             System.out.println("Serializirana datoteka " + imeDatoteke + " za nalaganje kontaktov ne obstaja!");
@@ -196,7 +244,6 @@ public class TelefonskiImenik {
      */
     public void izvoziPodatkeVCsvDatoteko() {
 
-        posodobiSeznamKontaktov();
         try (FileWriter fw = new FileWriter("Kontakti.csv");
              BufferedWriter bw = new BufferedWriter(fw)) {
             for (Kontakt kontakt : seznamKontaktov) {
@@ -209,12 +256,13 @@ public class TelefonskiImenik {
         }
     }
 
+    /**
+     * Prikaže kontakte, katerih imean ali priimki ustrezajo iskalnemu nizu ali pa ga vsebujejo kot podniz
+     */
     public void isciPoImenuAliPriimku(Scanner in) {
 
-        posodobiSeznamKontaktov();
         System.out.println("Vnesite iskalni niz: ");
         String vnos = in.next();
-
         try {
             int tmp = Integer.parseInt(vnos);
             System.out.println("Napačen vnos - vnesli ste število namesto iskalnega niza!");
@@ -227,11 +275,72 @@ public class TelefonskiImenik {
         }
     }
 
+    /**
+     * Shrani trenutne kontakte v bazo
+     */
+    public void shraniKontakteVBazo() {
+
+        if (kontaktDB.preveriPovezavo()) {
+            List<Kontakt> trenutniKontaktiVBazi = kontaktDB.pridobiVse();
+            for (Kontakt kontakt : seznamKontaktov) {
+                int count = 0;
+                for (Kontakt obstojeciKontakt : trenutniKontaktiVBazi) {
+                    if (!kontakt.equals(obstojeciKontakt)) { // poskrbimo da ne pride do podvajanj v bazi
+                        count++;
+                    }
+                }
+                if (count == trenutniKontaktiVBazi.size()) { // kontakt lahko dodamo
+                    kontaktDB.vstavi(kontakt);
+                }
+            }
+        } else {
+            System.out.println("Povzave na bazo ni mogoče vzpostaviti!");
+        }
+    }
+
+    /**
+     * Pridobi shranjene kontakte iz baze
+     */
+    public void pridobiKontakteIzBaze() {
+
+        if (kontaktDB.preveriPovezavo()) {
+
+            List<Kontakt> trenutniKontaktiVBazi = kontaktDB.pridobiVse();
+            for (Kontakt kontaktBaza : trenutniKontaktiVBazi) {
+                int count = 0;
+                for (Kontakt obstojeciKontakt : seznamKontaktov) {
+                    if (!kontaktBaza.equals(obstojeciKontakt) && kontaktBaza.getId() != obstojeciKontakt.getId()) { // poskrbimo da ne pride do podvajanj kontaktov
+                        count++;
+                    }
+                }
+                if (count == seznamKontaktov.size()) { // kontakt lahko dodamo
+                        seznamKontaktov.add(kontaktBaza);
+                }
+            }
+            System.out.println("Shranjeni kontakti so bili uspešno pridobljeni iz baze!");
+        }
+        else if (!kontaktDB.preveriPovezavo()) {
+            System.out.println("Povezave z bazo ni mogoče vzpostaviti!");
+        }
+        seznamKontaktov.sort(Comparator.comparing(Kontakt::getId));
+    }
+
     /**----------------Pomožne funkcije--------------**/
 
-    public Boolean preveriVnos(String[] vnosniPodatki) {
+    private Boolean preveriVnosId(String vnos) {
 
-        /**
+        try {
+            int vnesenID = Integer.parseInt(vnos);
+            return true;
+        }
+        catch (NumberFormatException e){
+            System.out.println(vnos + " ni število!");
+            return false;
+        }
+    }
+
+    private Boolean preveriVnos(String[] vnosniPodatki) {
+        /*
         System.out.println("ID: " + vnosniPodatki[0]);
         System.out.println("Ime: " + vnosniPodatki[1]);
         System.out.println("Priimek: " + vnosniPodatki[2]);
@@ -240,32 +349,46 @@ public class TelefonskiImenik {
         System.out.println("Telefon: " + vnosniPodatki[5]);
         System.out.println("Mobilni: " + vnosniPodatki[6]);
         System.out.println("Opomba: " + vnosniPodatki[7]);
-        **/
-        boolean check = true;
-        int vnesenID = 0;
-        try {
-            vnesenID = Integer.parseInt(vnosniPodatki[0]);
-        }
-        catch (NumberFormatException e){
-            System.out.println(vnosniPodatki[0] + " ni število!");
-            check = false;
-        }
-        System.out.println("Check: " + check);
-        if (check) {
-            Kontakt novKontakt = new Kontakt(vnesenID,vnosniPodatki[1],vnosniPodatki[2],vnosniPodatki[3],vnosniPodatki[4],vnosniPodatki[5],vnosniPodatki[6],vnosniPodatki[7]);
+        */
+        if (preveriVnosId(vnosniPodatki[0])) {
+            Kontakt novKontakt = null;
+            try {
+                novKontakt = new Kontakt(Integer.parseInt(vnosniPodatki[0]),vnosniPodatki[1],vnosniPodatki[2],vnosniPodatki[3],vnosniPodatki[4],vnosniPodatki[5],vnosniPodatki[6],vnosniPodatki[7]);
+                for (Kontakt kontakt : seznamKontaktov) {
 
-            for (Kontakt kontakt : seznamKontaktov) {
-                if (kontakt.equals(novKontakt)) {
-                    check = false;
-                    System.out.println("Vneseni kontakt je že zapisan v imeniku - podvajanje!");
+                     if (novKontakt.getId() == kontakt.getId()) {
+                        if (kontakt.equals(novKontakt)) {
+                            System.out.println("Vneseni kontakt že obstaja v imeniku - podvajanje!");
+                        } else {
+                            System.out.println("Kontakt z enakim ID-jem že obstaja, prosim vnesite drugačen ID!");
+                        }
+                        return false;
+                    }
+                    else if (kontakt.equals(novKontakt)) {
+                        System.out.println("Vneseni kontakt že obstaja v imeniku - podvajanje!");
+                        return false;
+                    }
                 }
+                return true;
+            } catch (ArrayIndexOutOfBoundsException e) {
+                System.out.println("Manjkajoči podatki!! Prosim vnesite vse zahtevane podatke!");
             }
 
         }
-        return check;
+        return false;
     }
 
-    public void posodobiPoljaKontakta(Kontakt kontakt,String[] polja) {
+    private Kontakt najdiKontaktZaId(int id) {
+
+        for (Kontakt kontakt : seznamKontaktov) {
+            if (kontakt.getId() == id) {
+                return kontakt;
+            }
+        }
+        return null;
+    }
+
+    private void posodobiPoljaKontakta(Kontakt kontakt, String[] polja) {
 
         kontakt.setIme(polja[0]);
         kontakt.setPriimek(polja[1]);
