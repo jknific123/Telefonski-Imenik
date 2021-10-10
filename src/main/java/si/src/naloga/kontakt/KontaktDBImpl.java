@@ -32,6 +32,7 @@ public class KontaktDBImpl {
                              "jdbc:postgresql://localhost:5432/kontakti",
                              "postgres",
                              "postgres");
+            //log.info("Vzpostavitev povezave z bazo je uspela.");
             return con;
         }
         catch (Exception exc) {
@@ -39,6 +40,13 @@ public class KontaktDBImpl {
         }
 
         return null;
+    }
+
+    /**
+     * Preveri ali je povezava z bazo vzpostavljena.
+     */
+    public Boolean preveriPovezavo() {
+        return con != null;
     }
 
     /**
@@ -132,7 +140,7 @@ public class KontaktDBImpl {
             ps.setString(7, kont.getMobilniTelefon());
             ps.setString(8, kont.getOpomba());
             ps.executeUpdate();
-
+            System.out.println("Dodajanje kontakta je bilo uspešno!");
         }
         catch (SQLException exc) {
             log.severe(exc.toString());
@@ -146,7 +154,6 @@ public class KontaktDBImpl {
                 }
             }
         }
-
     }
 
     /**
@@ -170,6 +177,7 @@ public class KontaktDBImpl {
             ps.setInt(8,kont.getId());
 
             ps.executeUpdate();
+            System.out.println("Posodabljanje kontaka je bilo uspešno!");
 
         } catch (SQLException exc) {
             log.severe(exc.toString());
@@ -199,6 +207,7 @@ public class KontaktDBImpl {
             ps = con.prepareStatement(sql);
             ps.setInt(1, id);
             ps.executeUpdate();
+            System.out.println("Kontakt je uspešno izbrisan!");
 
         } catch (SQLException exc) {
             log.severe(exc.toString());

@@ -101,7 +101,7 @@ public class Kontakt implements Serializable {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Kontakt kontakt = (Kontakt) o;
-        return id == kontakt.id &&
+        return //id == kontakt.id &&
                 Objects.equals(ime, kontakt.ime) &&
                 Objects.equals(priimek, kontakt.priimek) &&
                 Objects.equals(naslov, kontakt.naslov) &&

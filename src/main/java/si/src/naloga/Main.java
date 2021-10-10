@@ -4,67 +4,24 @@ import si.src.naloga.imenik.TelefonskiImenik;
 import si.src.naloga.kontakt.Kontakt;
 import si.src.naloga.kontakt.KontaktDBImpl;
 
+import java.io.IOException;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Scanner;
 
 public class Main {
 
-    public static void main(String[] args) throws SQLException {
+    public static void main(String[] args) throws SQLException, IOException, ClassNotFoundException {
 
         TelefonskiImenik telefonskiImenik = new TelefonskiImenik();
-        KontaktDBImpl kontaktDB = KontaktDBImpl.getInstance();
-
-        System.out.println("Vsi kontakti:");
-        for (Kontakt kontakt : kontaktDB.pridobiVse()) {
-            System.out.println(kontakt.toString());
-        }
-
-        Kontakt novKontakt = new Kontakt(99, "Tesntni", "Test", "Testni naslov", "testni.testni@gmail.com", "030000000", "030000000", "Testni prijatelj.");
-        kontaktDB.vstavi(novKontakt);
-        // List<Kontakt> vsiKontakti = kontaktDB.pridobiVse();
-
-        System.out.println("Printanje kontaktov po vstavljanju:");
-        for (Kontakt kontakt : kontaktDB.pridobiVse()) {
-            System.out.println(kontakt.toString());
-        }
-
-        novKontakt.setIme("Jakob");
-        kontaktDB.posodobi(novKontakt);
-
-        System.out.println("Printanje kontaktov po posodabljanju:");
-        for (Kontakt kontakt : kontaktDB.pridobiVse()) {
-            System.out.println(kontakt.toString());
-        }
-
-        System.out.println("Pridobi po ID:");
-        Kontakt tmp = kontaktDB.pridobiPoId(99);
-        System.out.println(tmp);
-
-        kontaktDB.izbrisiPoId(99);
-
-        System.out.println("Printanje kontaktov po izbrisu:");
-        for (Kontakt kontakt : kontaktDB.pridobiVse()) {
-            System.out.println(kontakt.toString());
-        }
-
-
-
-
-
-
-        //Kontakt novKontakt = new Kontakt();
-        //System.out.println("Zacenjam povezavo na bazo");
-        //KontaktDBImpl.connectToAndQueryDatabase("postgres", "postgres");
-
 
         izpisiMenu();
 
-        Scanner in = new Scanner(System.in);
+        Scanner in = new Scanner(System.in).useDelimiter("\n");
         String akcija = "";
 
         // zanka za izris menija
-        while (!"0".equals(akcija)) {
+        while (!"0".equals(akcija)) {  // prej
             akcija = in.next();
 
             switch (akcija) {
@@ -72,16 +29,16 @@ public class Main {
                     telefonskiImenik.izpisiVseKontakte();
                     break;
                 case "2":
-                    telefonskiImenik.dodajKontakt();
+                    telefonskiImenik.dodajKontakt(in);
                     break;
                 case "3":
-                    telefonskiImenik.urediKontakt();
+                    telefonskiImenik.urediKontakt(in);
                     break;
                 case "4":
-                    telefonskiImenik.izbrisiKontaktPoId();
+                    telefonskiImenik.izbrisiKontaktPoId(in);
                     break;
                 case "5":
-                    telefonskiImenik.izbrisiKontaktPoId();
+                    telefonskiImenik.izpisiKontaktZaId(in);
                     break;
                 case "6":
                     telefonskiImenik.izpisiSteviloKontaktov();
@@ -94,6 +51,9 @@ public class Main {
                     break;
                 case "9":
                     telefonskiImenik.izvoziPodatkeVCsvDatoteko();
+                    break;
+                case "10":
+                    telefonskiImenik.isciPoImenuAliPriimku(in);
                     break;
                 case "0":
                     System.exit(0);
@@ -126,6 +86,7 @@ public class Main {
         System.out.println("7 - Shrani kontakte na disk (serializacija)");
         System.out.println("8 - Preberi kontake iz serializirano datoteke");
         System.out.println("9 - Izvozi kontakte v csv");
+        System.out.println("10 - Iskanje kontaktov glede na ime ali priimek");
         System.out.println("");
         System.out.println("0 - Izhod iz aplikacije");
         System.out.println("----------------------------------");
