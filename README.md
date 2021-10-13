@@ -10,3 +10,5 @@ Nato v terminalu izvedete ukaz: docker run -d --name postgres-jdbc -e POSTGRES_P
 S tem se ustvari podatkovna baza kontakti, katero aplikacija Telefonski imenik uporablja. Uporabniško ime in geslo baze sta enaka: postgres.
 
 V kolikor ne želite uporabljati podatkovne baze, aplikacija Telefonski imenik omogoča shranjevanje in branje kontaktov na disk.
+
+![Funkcionalnosti aplikacije](Telefonski_imenik_fukncionalnosti.png)
